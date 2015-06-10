@@ -3,7 +3,11 @@ import qbs
 CppApplication {
     type: "application" // To suppress bundle generation on Mac
     consoleApplication: true
-    files: "main.cpp"
+    files: [
+        "game.cpp",
+        "game.h",
+        "main.cpp",
+    ]
 
     Group {     // Properties for the produced executable
         fileTagsFilter: product.type
