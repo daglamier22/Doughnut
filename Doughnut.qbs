@@ -4,9 +4,9 @@ CppApplication {
     type: "application" // To suppress bundle generation on Mac
     consoleApplication: true
     files: [
-        "game.cpp",
-        "game.h",
-        "main.cpp",
+        "src/game.cpp",
+        "src/game.h",
+        "src/main.cpp",
     ]
 
     Group {     // Properties for the produced executable
