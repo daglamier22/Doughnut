@@ -14,6 +14,10 @@ CppApplication {
         qbs.install: true
     }
 
-    cpp.dynamicLibraries: ["OgreMain", "boost_system"]
+    cpp.dynamicLibraries: ["OgreMain", "boost_system", "CEGUIBase", "CEGUIOgreRenderer", "OIS"]
+    cpp.cxxLanguageVersion: "c++11"
+    cpp.warningLevel: "default"
+    cpp.cppFlags: "-Wno-deprecated-declarations"
+    cpp.includePaths: "/usr/include/cegui-0"
+    cpp.defines: ["OGRE_PLUGINDIR=\"/usr/lib/OGRE\""]
 }
-
