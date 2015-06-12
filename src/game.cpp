@@ -90,7 +90,7 @@ bool Game::initializeOgre() {
 		m_WindowWidth = 1024;
 		m_WindowHeight = 768;
 		m_Fullscreen = false;
-		m_pWindow = m_pRoot->createRenderWindow("My Tetris Clone", m_WindowWidth, m_WindowHeight, m_Fullscreen, &params);
+		m_pWindow = m_pRoot->createRenderWindow("Doughnut", m_WindowWidth, m_WindowHeight, m_Fullscreen, &params);
 
 		// cleaning of windows events managed by Ogre::WindowEventUtilities
 		m_pRoot->clearEventTimes();

@@ -4,6 +4,7 @@ CppApplication {
     type: "application" // To suppress bundle generation on Mac
     consoleApplication: true
     files: [
+        "README.md",
         "src/game.cpp",
         "src/game.h",
         "src/main.cpp",
