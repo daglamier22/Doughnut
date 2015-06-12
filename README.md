@@ -1,8 +1,8 @@
-//////////////////////////////////////////////////////////////////////
-//			Project Name: Can't Stop the Doughnut Shop				//
-//			Designer: Brian McCarthy (daglamier22@gmail.com)		//
-//			Start Date: 2/18/2015									//
-//////////////////////////////////////////////////////////////////////
+Project Name: Can't Stop the Doughnut Shop
+==========================================
+	Designer: Brian McCarthy (daglamier22@gmail.com)
+	Start Date: 2/18/2015
+
 
 Basic Idea
 ----------
