@@ -19,6 +19,25 @@ bool Game::initialize() {
 	if( !initializeOIS() )
 		return false;
 
+	if( !initializeBullet() )
+		return false;
+
+	//create the plane in Ogre3D
+	Ogre::Plane plane(Ogre::Vector3::UNIT_Z, -15);
+	Ogre::MeshManager::getSingleton().createPlane("ground", "meshes", plane, 1500, 1500, 20, 20, true, 1, 5, 5, Ogre::Vector3::UNIT_Y);
+	Ogre::Entity* entGround = m_pScene->createEntity("ground");
+	Ogre::SceneNode* groundNode = m_pScene->getRootSceneNode()->createChildSceneNode("groundNode");
+	groundNode->attachObject(entGround);
+	entGround->setMaterialName("BluePill");
+
+	//create the Bullet ground plane
+	m_pGroundShape = new btStaticPlaneShape(btVector3(0, 0, 1), -15);
+	m_pGroundMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 0, -1)));
+	btRigidBody::btRigidBodyConstructionInfo groundRigidBodyCI(0, m_pGroundMotionState, m_pGroundShape, btVector3(0, 0, 0));
+	m_pGroundBody = new btRigidBody(groundRigidBodyCI);
+	m_pDynamicsWorld->addRigidBody(m_pGroundBody);
+
+	//create the player in Ogre3D
 	Ogre::String meshname = "Pill.mesh";
 	Ogre::Entity* entity = m_pScene->createEntity(meshname);
 	m_pPlayerSceneNode = m_pRootSceneNode->createChildSceneNode();
@@ -27,16 +46,18 @@ bool Game::initialize() {
 	m_PlayerPosition = Ogre::Vector3(0.0f, 0.0f, -10.0f);
 	m_PlayerVelocity = Ogre::Vector3(0.0f, 0.0f, 0.0f);
 	m_pPlayerSceneNode->translate(m_PlayerPosition);
-	m_pPlayerSceneNode->setDirection(m_PlayerVelocity);
 
-	Ogre::Light* light = m_pScene->createLight();
-	light->setType(Ogre::Light::LT_DIRECTIONAL);
-	light->setDiffuseColour(0.8f, 0.8f, 0.8f);
-	light->setSpecularColour(1.0f, 1.0f, 1.0f);
-	light->setDirection(Ogre::Vector3(0, 0, -1));
-	Ogre::SceneNode* lightnode = m_pRootSceneNode->createChildSceneNode();
-	lightnode->attachObject(light);
-	m_pScene->setAmbientLight(Ogre::ColourValue(0.5f, 0.5f, 0.5f));
+	//create the Bullet player
+	m_pPlayerShape = new btBoxShape(btVector3(1,1,1));
+	m_pPlayerMotionState = new btDefaultMotionState(btTransform(btQuaternion(0, 0, 0, 1), btVector3(0, 0, -10)));
+	btScalar playerMass = 1;
+	btVector3 playerInertia(0, 0, 0);
+	m_pPlayerShape->calculateLocalInertia(playerMass, playerInertia);
+	btRigidBody::btRigidBodyConstructionInfo playerRigidBodyCI(playerMass, m_pPlayerMotionState, m_pPlayerShape, playerInertia);
+	m_pPlayerBody = new btRigidBody(playerRigidBodyCI);
+	//body->setRestitution(1);
+	m_pPlayerBody->setUserPointer(m_pPlayerSceneNode);
+	m_pDynamicsWorld->addRigidBody(m_pPlayerBody);
 
 	return true;
 }//Game::initialize
@@ -112,7 +133,7 @@ bool Game::initializeOgre() {
 		Ogre::Camera* pCamera = m_pScene->createCamera("MainCamera");
 
 		// attach the camera to a new SceneNode
-		m_pCameraNode = m_pRootSceneNode->createChildSceneNode("MainCameraNode",Ogre::Vector3(0.0f, 0.0f, 0.0f));
+		m_pCameraNode = m_pRootSceneNode->createChildSceneNode("MainCameraNode",Ogre::Vector3(0.0f, 0.0f, 10.0f));
 		m_pCameraNode->attachObject(pCamera);
 
 		// create a viewport
@@ -138,6 +159,15 @@ bool Game::initializeOgre() {
 		}
 
 		m_pRoot->addFrameListener(this);
+
+		Ogre::Light* light = m_pScene->createLight();
+		light->setType(Ogre::Light::LT_DIRECTIONAL);
+		light->setDiffuseColour(0.8f, 0.8f, 0.8f);
+		light->setSpecularColour(1.0f, 1.0f, 1.0f);
+		light->setDirection(Ogre::Vector3(0, 0, -1));
+		Ogre::SceneNode* lightnode = m_pRootSceneNode->createChildSceneNode();
+		lightnode->attachObject(light);
+		m_pScene->setAmbientLight(Ogre::ColourValue(0.5f, 0.5f, 0.5f));
 	} catch(Ogre::Exception &e) {
 		std::cout << "!!!!Ogre::Exception!!!!" << e.what() << std::endl;
 	}
@@ -243,14 +273,22 @@ bool Game::keyPressed( const OIS::KeyEvent &e ) {
 	if( e.key == OIS::KC_ESCAPE )
 		m_running = false;
 
-	if( e.key == OIS::KC_W )
+	if( e.key == OIS::KC_W ) {
 		m_PlayerVelocity += Ogre::Vector3( 0.0f, 5.0f, 0.0f);
-	if( e.key == OIS::KC_A )
+		m_pPlayerBody->setLinearVelocity(btVector3(m_PlayerVelocity.x, m_PlayerVelocity.y, m_PlayerVelocity.z));
+	}
+	if( e.key == OIS::KC_A ) {
 		m_PlayerVelocity += Ogre::Vector3(-5.0f, 0.0f, 0.0f);
-	if( e.key == OIS::KC_S )
+		m_pPlayerBody->setLinearVelocity(btVector3(m_PlayerVelocity.x, m_PlayerVelocity.y, m_PlayerVelocity.z));
+	}
+	if( e.key == OIS::KC_S ) {
 		m_PlayerVelocity += Ogre::Vector3( 0.0f,-5.0f, 0.0f);
-	if( e.key == OIS::KC_D )
+		m_pPlayerBody->setLinearVelocity(btVector3(m_PlayerVelocity.x, m_PlayerVelocity.y, m_PlayerVelocity.z));
+	}
+	if( e.key == OIS::KC_D ) {
 		m_PlayerVelocity += Ogre::Vector3( 5.0f, 0.0f, 0.0f);
+		m_pPlayerBody->setLinearVelocity(btVector3(m_PlayerVelocity.x, m_PlayerVelocity.y, m_PlayerVelocity.z));
+	}
 
 	return true;
 }//Game::keyPressed
@@ -261,14 +299,22 @@ bool Game::keyReleased( const OIS::KeyEvent &e ) {
 	if( CEGUI::System::getSingleton().getDefaultGUIContext().injectChar(e.text) )
 		return true;
 
-	if( e.key == OIS::KC_W )
+	if( e.key == OIS::KC_W ) {
 		m_PlayerVelocity -= Ogre::Vector3( 0.0f, 5.0f, 0.0f);
-	if( e.key == OIS::KC_A )
+		m_pPlayerBody->setLinearVelocity(btVector3(m_PlayerVelocity.x, m_PlayerVelocity.y, m_PlayerVelocity.z));
+	}
+	if( e.key == OIS::KC_A ) {
 		m_PlayerVelocity -= Ogre::Vector3(-5.0f, 0.0f, 0.0f);
-	if( e.key == OIS::KC_S )
+		m_pPlayerBody->setLinearVelocity(btVector3(m_PlayerVelocity.x, m_PlayerVelocity.y, m_PlayerVelocity.z));
+	}
+	if( e.key == OIS::KC_S ) {
 		m_PlayerVelocity -= Ogre::Vector3( 0.0f,-5.0f, 0.0f);
-	if( e.key == OIS::KC_D )
+		m_pPlayerBody->setLinearVelocity(btVector3(m_PlayerVelocity.x, m_PlayerVelocity.y, m_PlayerVelocity.z));
+	}
+	if( e.key == OIS::KC_D ) {
 		m_PlayerVelocity -= Ogre::Vector3( 5.0f, 0.0f, 0.0f);
+		m_pPlayerBody->setLinearVelocity(btVector3(m_PlayerVelocity.x, m_PlayerVelocity.y, m_PlayerVelocity.z));
+	}
 
 	return true;
 }//Game::keyReleased
@@ -348,6 +394,17 @@ bool Game::mouseReleased( const OIS::MouseEvent &e, OIS::MouseButtonID id ) {
 	return true;
 }//Game::mouseReleased
 
+bool Game::initializeBullet() {
+	m_pBroadphase = new btDbvtBroadphase();
+	m_pCollisionConfiguration = new btDefaultCollisionConfiguration();
+	m_pDispatcher = new btCollisionDispatcher(m_pCollisionConfiguration);
+	m_pSolver = new btSequentialImpulseConstraintSolver();
+	m_pDynamicsWorld = new btDiscreteDynamicsWorld(m_pDispatcher, m_pBroadphase, m_pSolver, m_pCollisionConfiguration);
+	m_pDynamicsWorld->setGravity(btVector3(0,0,-10));
+
+	return true;
+}//Game::initializeBullet
+
 bool Game::run() {
 	while( m_running ) {
 		m_pKeyboard->capture();
@@ -362,10 +419,30 @@ bool Game::run() {
 }//Game::run
 
 bool Game::update( float deltaSec ) {
-	m_pPlayerSceneNode->translate(m_PlayerVelocity * deltaSec );
-	Ogre::Vector3 src = m_pPlayerSceneNode->getOrientation() * Ogre::Vector3::UNIT_X;
-	Ogre::Quaternion quat = src.getRotationTo(m_PlayerVelocity);
-	m_pPlayerSceneNode->rotate(quat);
+	m_pDynamicsWorld->stepSimulation(deltaSec);
+	btCollisionObjectArray objArray = m_pDynamicsWorld->getCollisionObjectArray();
+	for( int i = 0; i < objArray.size(); i++ ) {
+		btCollisionObject* obj = objArray[i];
+		btRigidBody* body = btRigidBody::upcast(obj);
+
+		if( body && body->getMotionState() ) {
+			btTransform trans;
+			body->getMotionState()->getWorldTransform(trans);
+
+			void* userPointer = body->getUserPointer();
+			if( userPointer ) {
+				btQuaternion orientation = trans.getRotation();
+				Ogre::SceneNode* sceneNode = static_cast<Ogre::SceneNode*>(userPointer);
+				sceneNode->setPosition(Ogre::Vector3(trans.getOrigin().getX(), trans.getOrigin().getY(), trans.getOrigin().getZ()));
+				sceneNode->setOrientation(Ogre::Quaternion(orientation.getW(), orientation.getX(), orientation.getY(), orientation.getZ()));
+			}
+		}
+	}
+
+//	m_pPlayerSceneNode->translate(m_PlayerVelocity * deltaSec );
+//	Ogre::Vector3 src = m_pPlayerSceneNode->getOrientation() * Ogre::Vector3::UNIT_X;
+//	Ogre::Quaternion quat = src.getRotationTo(m_PlayerVelocity);
+//	m_pPlayerSceneNode->rotate(quat);
 
 	return true;
 }//Game::update
@@ -374,6 +451,7 @@ bool Game::shutdown() {
 	shutdownOgre();
 	shutdownCEGUI();
 	shutdownOIS();
+	shutdownBullet();
 }//Game::shutdown
 
 void Game::shutdownOgre() {
@@ -411,3 +489,19 @@ void Game::shutdownOIS() {
 		m_pInputManager = NULL;
 	}
 }//Game::shutdownOIS
+
+void Game::shutdownBullet() {
+	delete m_pPlayerMotionState;
+	delete m_pPlayerBody;
+	delete m_pPlayerShape;
+
+	delete m_pGroundMotionState;
+	delete m_pGroundBody;
+	delete m_pGroundShape;
+
+	delete m_pDynamicsWorld;
+	delete m_pSolver;
+	delete m_pDispatcher;
+	delete m_pCollisionConfiguration;
+	delete m_pBroadphase;
+}//Game::shutdownBullet

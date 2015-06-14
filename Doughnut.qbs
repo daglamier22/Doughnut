@@ -15,10 +15,10 @@ CppApplication {
         qbs.install: true
     }
 
-    cpp.dynamicLibraries: ["OgreMain", "boost_system", "CEGUIBase", "CEGUIOgreRenderer", "OIS"]
+    cpp.dynamicLibraries: ["OgreMain", "boost_system", "CEGUIBase", "CEGUIOgreRenderer", "OIS", "BulletDynamics", "BulletCollision", "LinearMath"]
     cpp.cxxLanguageVersion: "c++11"
     cpp.warningLevel: "default"
     cpp.cppFlags: "-Wno-deprecated-declarations"
-    cpp.includePaths: ["/usr/include/cegui-0", "/usr/include/OGRE"]
+    cpp.includePaths: ["/usr/include/cegui-0", "/usr/include/bullet"]
     cpp.defines: ["OGRE_PLUGINDIR=\"/usr/lib/OGRE\""]
 }
