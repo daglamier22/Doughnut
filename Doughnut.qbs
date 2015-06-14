@@ -19,6 +19,6 @@ CppApplication {
     cpp.cxxLanguageVersion: "c++11"
     cpp.warningLevel: "default"
     cpp.cppFlags: "-Wno-deprecated-declarations"
-    cpp.includePaths: "/usr/include/cegui-0"
+    cpp.includePaths: ["/usr/include/cegui-0", "/usr/include/OGRE"]
     cpp.defines: ["OGRE_PLUGINDIR=\"/usr/lib/OGRE\""]
 }

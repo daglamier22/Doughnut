@@ -19,6 +19,25 @@ bool Game::initialize() {
 	if( !initializeOIS() )
 		return false;
 
+	Ogre::String meshname = "Pill.mesh";
+	Ogre::Entity* entity = m_pScene->createEntity(meshname);
+	m_pPlayerSceneNode = m_pRootSceneNode->createChildSceneNode();
+	m_pPlayerSceneNode->attachObject(entity);
+	m_pPlayerSceneNode->scale(Ogre::Vector3(0.5f, 0.5f, 0.5f));
+	m_PlayerPosition = Ogre::Vector3(0.0f, 0.0f, -10.0f);
+	m_PlayerVelocity = Ogre::Vector3(0.0f, 0.0f, 0.0f);
+	m_pPlayerSceneNode->translate(m_PlayerPosition);
+	m_pPlayerSceneNode->setDirection(m_PlayerVelocity);
+
+	Ogre::Light* light = m_pScene->createLight();
+	light->setType(Ogre::Light::LT_DIRECTIONAL);
+	light->setDiffuseColour(0.8f, 0.8f, 0.8f);
+	light->setSpecularColour(1.0f, 1.0f, 1.0f);
+	light->setDirection(Ogre::Vector3(0, 0, -1));
+	Ogre::SceneNode* lightnode = m_pRootSceneNode->createChildSceneNode();
+	lightnode->attachObject(light);
+	m_pScene->setAmbientLight(Ogre::ColourValue(0.5f, 0.5f, 0.5f));
+
 	return true;
 }//Game::initialize
 
@@ -30,29 +49,17 @@ bool Game::initializeOgre() {
 		Ogre::String logFileName = "Ogre.log";
 
 		// create the root ogre object
-		m_pRoot.reset(new Ogre::Root(configFileName, pluginsFileName, logFileName));
+		m_pRoot = new Ogre::Root(configFileName, pluginsFileName, logFileName);
 
 		// load the necessary plugins
-#ifdef _WIN32
 		std::vector<Ogre::String> pluginNames;
-		pluginNames.push_back("RenderSystem_GL");
-		pluginNames.push_back("Plugin_ParticleFX");
+		pluginNames.push_back("/RenderSystem_GL");
+		pluginNames.push_back("/Plugin_ParticleFX");
 		//pluginNames.push_back("Plugin_CgProgramManager");
 		//pluginNames.push_back("Plugin_PCZSceneManager");
 		//pluginNames.push_back("Plugin_OctreeZone");
-		pluginNames.push_back("Plugin_OctreeSceneManager");
+		pluginNames.push_back("/Plugin_OctreeSceneManager");
 		//pluginNames.push_back("Plugin_BSPSceneManager");
-#endif
-#ifdef __linux__
-		std::vector<Ogre::String> pluginNames;
-		pluginNames.push_back("./RenderSystem_GL");
-		pluginNames.push_back("./Plugin_ParticleFX");
-		//pluginNames.push_back("./Plugin_CgProgramManager");
-		//pluginNames.push_back("./Plugin_PCZSceneManager");
-		//pluginNames.push_back("./Plugin_OctreeZone");
-		pluginNames.push_back("./Plugin_OctreeSceneManager");
-		//pluginNames.push_back("./Plugin_BSPSceneManager");
-#endif
 
 		for( std::vector<Ogre::String>::iterator itr = pluginNames.begin(); itr != pluginNames.end(); itr++ ) {
 			Ogre::String& pluginName = (*itr);
@@ -96,22 +103,23 @@ bool Game::initializeOgre() {
 		m_pRoot->clearEventTimes();
 
 		// create the scene manager
-		m_pScene.reset(m_pRoot->createSceneManager(Ogre::ST_GENERIC,"TestScene"));
+		m_pScene = m_pRoot->createSceneManager(Ogre::ST_GENERIC,"TestScene");
 
 		//grab the root node for future use
-		m_pRootSceneNode.reset(m_pScene->getRootSceneNode());
+		m_pRootSceneNode = m_pScene->getRootSceneNode();
 
 		// create the camera
 		Ogre::Camera* pCamera = m_pScene->createCamera("MainCamera");
 
 		// attach the camera to a new SceneNode
-		m_pCameraNode.reset(m_pRootSceneNode->createChildSceneNode("MainCameraNode",Ogre::Vector3(0.0f, 0.0f, 0.0f)));
+		m_pCameraNode = m_pRootSceneNode->createChildSceneNode("MainCameraNode",Ogre::Vector3(0.0f, 0.0f, 0.0f));
 		m_pCameraNode->attachObject(pCamera);
 
 		// create a viewport
 		Ogre::Viewport* vp = m_pWindow->addViewport(pCamera, 100, 0.0f, 0.0f, 1.0f, 1.0f);
 		vp->setAutoUpdated(true);
 		vp->setBackgroundColour(Ogre::ColourValue(0.0f, 0.0f, 0.0f, 0.0f));
+		m_pWindow->setActive(true);
 
 		// choose the visual ratio of the camera based on the viewport
 		float ratio = float(vp->getActualWidth()) / float(vp->getActualHeight());
@@ -121,19 +129,25 @@ bool Game::initializeOgre() {
 		pCamera->setNearClipDistance(1.5f);
 		pCamera->setFarClipDistance(3000.0f);
 
-		Ogre::String RGs[7] = {"schemes", "imagesets", "fonts", "layouts", "looknfeel", "lua_scripts"};
+		Ogre::String RGs[8] = {"schemes", "imagesets", "fonts", "layouts", "looknfeel", "lua_scripts", "meshes", "materials"};
 		Ogre::ResourceGroupManager& lRgMgr = Ogre::ResourceGroupManager::getSingleton();
-		for( int i = 0; i < 7; i++ ) {
+		for( int i = 0; i < 8; i++ ) {
 			lRgMgr.createResourceGroup(RGs[i]);
 			lRgMgr.addResourceLocation("datafiles/"+RGs[i], "FileSystem", RGs[i], false);
 			lRgMgr.initialiseResourceGroup(RGs[i]);
 		}
+
+		m_pRoot->addFrameListener(this);
 	} catch(Ogre::Exception &e) {
 		std::cout << "!!!!Ogre::Exception!!!!" << e.what() << std::endl;
 	}
 
 	return true;
 }//Game:initializeOgre
+
+bool Game::frameRenderingQueued( const Ogre::FrameEvent &evt ) {
+	return update(evt.timeSinceLastFrame);
+}//Game::frameRenderingQueued
 
 bool Game::initializeCEGUI() {
 	//link into the Ogre system
@@ -160,7 +174,7 @@ bool Game::initializeCEGUI() {
 	CEGUI::Window* myRoot = CEGUI::WindowManager::getSingleton().createWindow( "DefaultWindow", (CEGUI::utf8*)"_MasterRoot" );
 	CEGUI::System::getSingleton().getDefaultGUIContext().setRootWindow(myRoot);
 
-	CEGUI::FrameWindow* fWnd = static_cast<CEGUI::FrameWindow*>(CEGUI::WindowManager::getSingleton().createWindow( "TaharezLook/FrameWindow", (CEGUI::utf8*)"testWindow" ));
+/*	CEGUI::FrameWindow* fWnd = static_cast<CEGUI::FrameWindow*>(CEGUI::WindowManager::getSingleton().createWindow( "TaharezLook/FrameWindow", (CEGUI::utf8*)"testWindow" ));
 	myRoot->addChild( fWnd );
 	// position a quarter of the way in from the top-left of parent.
 	fWnd->setPosition( CEGUI::UVector2( CEGUI::UDim( 0.25f, 0.0f ), CEGUI::UDim( 0.25f, 0.0f ) ) );
@@ -173,7 +187,7 @@ bool Game::initializeCEGUI() {
 	quit->setSize( CEGUI::USize( CEGUI::UDim(0.15f, 0.0f), CEGUI::UDim(0.05f, 0.0f) ) );
 	myRoot->addChild(quit);
 	quit->show();
-
+*/
 	return true;
 }//Game:initializeCEGUI
 
@@ -229,6 +243,15 @@ bool Game::keyPressed( const OIS::KeyEvent &e ) {
 	if( e.key == OIS::KC_ESCAPE )
 		m_running = false;
 
+	if( e.key == OIS::KC_W )
+		m_PlayerVelocity += Ogre::Vector3( 0.0f, 5.0f, 0.0f);
+	if( e.key == OIS::KC_A )
+		m_PlayerVelocity += Ogre::Vector3(-5.0f, 0.0f, 0.0f);
+	if( e.key == OIS::KC_S )
+		m_PlayerVelocity += Ogre::Vector3( 0.0f,-5.0f, 0.0f);
+	if( e.key == OIS::KC_D )
+		m_PlayerVelocity += Ogre::Vector3( 5.0f, 0.0f, 0.0f);
+
 	return true;
 }//Game::keyPressed
 
@@ -237,6 +260,15 @@ bool Game::keyReleased( const OIS::KeyEvent &e ) {
 	CEGUI::System::getSingleton().getDefaultGUIContext().injectKeyDown((CEGUI::Key::Scan)e.key);
 	if( CEGUI::System::getSingleton().getDefaultGUIContext().injectChar(e.text) )
 		return true;
+
+	if( e.key == OIS::KC_W )
+		m_PlayerVelocity -= Ogre::Vector3( 0.0f, 5.0f, 0.0f);
+	if( e.key == OIS::KC_A )
+		m_PlayerVelocity -= Ogre::Vector3(-5.0f, 0.0f, 0.0f);
+	if( e.key == OIS::KC_S )
+		m_PlayerVelocity -= Ogre::Vector3( 0.0f,-5.0f, 0.0f);
+	if( e.key == OIS::KC_D )
+		m_PlayerVelocity -= Ogre::Vector3( 5.0f, 0.0f, 0.0f);
 
 	return true;
 }//Game::keyReleased
@@ -321,12 +353,22 @@ bool Game::run() {
 		m_pKeyboard->capture();
 		m_pMouse->capture();
 
+		m_pWindow->swapBuffers();;
 		m_pRoot->renderOneFrame();
 		Ogre::WindowEventUtilities::messagePump();
 		const Ogre::RenderTarget::FrameStats& lStats = m_pWindow->getStatistics();
 		std::cout << "FPS: " << lStats.lastFPS << "; AvgFPS : " << lStats.avgFPS << "; batchcount :" << lStats.batchCount << std::endl;
 	}
 }//Game::run
+
+bool Game::update( float deltaSec ) {
+	m_pPlayerSceneNode->translate(m_PlayerVelocity * deltaSec );
+	Ogre::Vector3 src = m_pPlayerSceneNode->getOrientation() * Ogre::Vector3::UNIT_X;
+	Ogre::Quaternion quat = src.getRotationTo(m_PlayerVelocity);
+	m_pPlayerSceneNode->rotate(quat);
+
+	return true;
+}//Game::update
 
 bool Game::shutdown() {
 	shutdownOgre();
@@ -342,7 +384,9 @@ void Game::shutdownOgre() {
 		m_pScene->destroyAllManualObjects();
 		m_pScene->destroyAllEntities();
 		m_pScene->destroyAllLights();
+		delete m_pScene;
 		m_pRootSceneNode->removeAndDestroyAllChildren();
+		delete m_pRootSceneNode;
 	} catch(Ogre::Exception &e) {
 		std::cout << "!!!!Ogre::Exception!!!!" << e.what() << std::endl;
 	}
