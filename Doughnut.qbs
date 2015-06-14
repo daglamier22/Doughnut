@@ -5,6 +5,15 @@ CppApplication {
     consoleApplication: true
     files: [
         "README.md",
+        "datafiles/fonts/DejaVuSans-10.font",
+        "datafiles/fonts/DejaVuSans-12.font",
+        "datafiles/imagesets/TaharezLook.imageset",
+        "datafiles/imagesets/TaharezLook.png",
+        "datafiles/looknfeel/TaharezLook.looknfeel",
+        "datafiles/materials/BluePill.material",
+        "datafiles/materials/RedPill.material",
+        "datafiles/meshes/Pill.mesh",
+        "datafiles/schemes/TaharezLook.scheme",
         "src/game.cpp",
         "src/game.h",
         "src/main.cpp",
